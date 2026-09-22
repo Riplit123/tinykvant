@@ -166,63 +166,155 @@ const button = (label, action, data = "", cls = "primary", disabled = false) =>
   `<button class="btn ${cls}" data-action="${action}" ${data} ${disabled ? "disabled" : ""}>${label}</button>`;
 const progress = (value, total, attrs = "") =>
   `<div class="progress-track"><i ${attrs} style="width:${Math.min(100, Math.max(0, (value / total) * 100))}%"></i></div>`;
+
 function shell() {
-  $("#app").innerHTML =
-    `<aside class="sidebar"><div class="brand"><div class="brand-mark">к</div><div>кванториум<small>город идей</small></div></div><div class="nav-caption">Ваш научный центр</div><nav class="nav" aria-label="Основная навигация">${[
-      ["tower", "▥", "Моя башня"],
-      ["build", "⊞", "Строительство"],
-      ["staff", "♧", "Преподаватели"],
-      ["projects", "⚑", "Проекты"],
-      ["collection", "✧", "Коллекция"],
-    ]
-      .map(
-        ([id, icon, label]) =>
-          `<button class="${id === "tower" ? "active" : ""}" data-action="nav" data-view="${id}" aria-label="${label}"><span class="nav-icon">${icon}</span><span class="nav-text">${label}</span></button>`,
-      )
-      .join(
-        "",
-      )}</nav><div class="sidebar-foot"><div class="director"><div class="avatar sprite-avatar">${sprite(1)}</div><div><b>Директор кванториума</b><small>Всё начинается с идеи</small></div></div><button class="settings-link" data-action="nav" data-view="settings" aria-label="Настройки">⚙ <span>Настройки игры</span></button></div></aside>
- <div class="workspace"><header class="topbar"><span class="mobile-brand" aria-label="Кванториум">к.</span><div class="breadcrumb">Кванториум <span class="muted">/</span> <b>Моя башня</b></div><div class="resources" aria-label="Ресурсы"><div class="resource" title="Монеты: постройка и найм"><span class="symbol">●</span><div><strong id="coins">280</strong><small>МОНЕТЫ</small></div></div><div class="resource" title="Знания: обучение и улучшения"><span class="symbol">✦</span><div><strong id="knowledge">0</strong><small>ЗНАНИЯ</small></div></div><div class="resource" title="Награды за выставки и совместные проекты"><span class="symbol">♜</span><div><strong id="trophies">0</strong><small>НАГРАДЫ</small></div></div></div><button class="icon-btn" data-action="nav" data-view="help" aria-label="Как играть">?</button></header>
- <main class="page"><div id="alerts"></div><div class="page-heading"><div><p class="eyebrow">Место, где рождаются открытия</p><h1>Ваш кванториум</h1></div><span class="heading-note">✧ <span id="chapter-label">Глава 1 из 6</span></span></div><div class="layout"><section class="tower-stage" aria-label="Башня кванториума"><div class="stage-bar"><span id="floor-total">3 этажа · 1 направление</span><div class="controls" aria-label="Скорость игры"><button data-action="pause" id="pause" aria-label="Пауза">Ⅱ</button><button data-action="speed" data-value="1" id="speed1" class="on">1×</button><button data-action="speed" data-value="2" id="speed2">2×</button></div></div><button class="roof" data-action="nav" data-view="build"><span class="plus">＋</span><b>Место для новой идеи</b><small id="roof-price">Построить новый квантум</small></button><div class="tower" id="tower"></div><div class="ground-caption">⌖ Научная улица, 1 · Ваш город открытий</div></section><aside class="rail" id="rail" aria-label="Цели и события"></aside></div><p class="footer-note">Прогресс сохраняется на этом устройстве. Учитесь, пробуйте и делайте перерывы.</p></main></div>
- <nav class="mobile-nav" aria-label="Навигация"><button data-action="nav" data-view="tower" class="active"><span>▥</span>Башня</button><button data-action="nav" data-view="build"><span>⊞</span>Строить</button><button data-action="nav" data-view="staff"><span>♧</span>Команда</button><button data-action="nav" data-view="projects"><span>⚑</span>Проекты</button><button data-action="nav" data-view="settings"><span>⚙</span>Ещё</button></nav>`;
+  $("#app").innerHTML = `
+    <main class="building-view" aria-label="Здание кванториума">
+      <div class="building-roof" aria-hidden="true"></div>
+      <div class="building-stack" id="tower"></div>
+      <div class="building-foot" aria-hidden="true"></div>
+    </main>
+    <footer class="resource-bar" aria-label="Ресурсы">
+      <div class="res-group">
+        <div class="res-item" title="Монеты"><span class="res-symbol coins">●</span><div class="res-text"><strong id="coins">280</strong><small>Монеты</small></div></div>
+        <div class="res-item" title="Знания"><span class="res-symbol knowledge">✦</span><div class="res-text"><strong id="knowledge">0</strong><small>Знания</small></div></div>
+        <div class="res-item" title="Награды"><span class="res-symbol trophies">♜</span><div class="res-text"><strong id="trophies">0</strong><small>Награды</small></div></div>
+      </div>
+      <div class="res-controls">
+        <button class="ctrl-btn help" data-action="nav" data-view="help" aria-label="Как играть">?</button>
+        <button class="ctrl-btn" data-action="pause" id="pause" aria-label="Пауза">Ⅱ</button>
+        <button class="ctrl-btn" data-action="speed" data-value="1" id="speed1">1×</button>
+        <button class="ctrl-btn" data-action="speed" data-value="2" id="speed2">2×</button>
+      </div>
+    </footer>
+    <div id="alerts"></div>`;
 }
-function floorHTML(f, index) {
-  const l = lab(f.id),
-    status = floorState(state, f),
-    labels = {
-      teacher: "Нужен преподаватель",
-      waiting: "Набираем группу",
-      learning: "Идёт занятие",
-      paused: "Занятие на паузе",
-      ready: "Проект готов",
-    };
-  return `<article class="floor" data-floor-card="${f.id}"><div class="floor-top"><div class="floor-name"><span class="floor-number">${index + 3}</span><b>${esc(l.name)}</b><span class="level">ур. ${f.level}</span></div><span class="status ${status}">${labels[status]}</span></div><button class="room" data-action="lab" data-id="${f.id}" aria-label="Открыть ${esc(l.name)}">${roomArt(f.id)}<span class="room-label"><span>${l.icon}</span>${esc(l.short.toUpperCase())}</span><span class="actors" aria-hidden="true">${activeTeachers(
-    state,
-    f,
-  )
-    .map(
-      (t, i) =>
-        `<span class="person teacher" style="--delay:-${i * 0.8}s">${sprite(i % 2, status === "learning")}</span>`,
-    )
-    .join(
-      "",
-    )}${Array.from({ length: Math.min(f.students, 5) }, (_, i) => `<span class="person" style="--delay:-${i * 0.6}s">${sprite(2 + (i % 2), status === "learning")}</span>`).join("")}</span>${status === "ready" ? '<span class="room-cta">✦ Защитить проект</span>' : status === "teacher" ? '<span class="room-cta">＋ Назначить</span>' : ""}</button><div class="floor-bottom"><span>♧ <strong>${f.students}/${capacity(f)}</strong> учеников</span><span>${status === "learning" ? `<strong data-lesson="${f.id}">${time(f.lesson)}</strong>` : `${f.projects} проектов`}</span><span><strong>${f.teachers.length}/3</strong> преподавателей</span></div>${f.lesson > 0 ? `<div class="mini-progress"><i data-floor-progress="${f.id}" style="width:${(1 - f.lesson / f.lessonTotal) * 100}%"></i></div>` : ""}</article>`;
+
+function directorFloorHTML() {
+  return `<article class="floor-row" data-floor-card="director">
+    <div class="floor-marker"><span class="marker-icon">🏢</span><span>Верх</span></div>
+    <div class="floor-content">
+      <div class="floor-header director">
+        <b>Кабинет директора</b>
+        <span class="floor-hint">Центр управления</span>
+      </div>
+      <button class="room" data-action="nav" data-view="director" aria-label="Открыть кабинет директора">
+        ${roomArt("director")}
+        <span class="room-label"><span>♧</span>Директор · всё управление здесь</span>
+        <span class="actors service-actors">
+          <span class="person teacher">${sprite(1, true)}</span>
+        </span>
+        <span class="room-cta">⚙ Управление</span>
+      </button>
+    </div>
+  </article>`;
 }
+
+function receptionFloorHTML() {
+  return `<article class="floor-row" data-floor-card="reception">
+    <div class="floor-marker"><span>1</span></div>
+    <div class="floor-content">
+      <div class="floor-header service">
+        <b>Ресепшн</b>
+        <span class="floor-hint">${state.newbies.length ? state.newbies.length + " ждут" : "Добро пожаловать"}</span>
+      </div>
+      <button class="room" data-action="nav" data-view="reception" aria-label="Ресепшн">
+        ${roomArt("reception")}
+        <span class="room-label"><span>☀</span>Большие открытия начинаются здесь</span>
+        <span class="actors service-actors">
+          ${state.newbies
+            .map(
+              (n, i) =>
+                `<span class="person" style="--delay:-${i * 0.6}s">${sprite(2 + (i % 2), true)}</span>`,
+            )
+            .join("")}
+        </span>
+        ${state.newbies.length ? '<span class="room-cta">? Помочь новенькому</span>' : ""}
+      </button>
+    </div>
+  </article>`;
+}
+
+function buildSlotHTML() {
+  if (state.floors.length >= 10) return "";
+  const cost = floorCost(state);
+  return `<article class="floor-row" data-floor-card="__build__">
+    <div class="floor-marker"><span class="marker-icon">＋</span></div>
+    <div class="floor-content">
+      <div class="floor-header service">
+        <b>Свободный этаж</b>
+        <span class="floor-hint">${fmt(cost)} ●</span>
+      </div>
+      <button class="room" data-action="nav" data-view="build" aria-label="Построить новый квантум">
+        <span class="room-art" aria-hidden="true" style="background:repeating-linear-gradient(45deg,#e8ece0 0 20px,#dee5d1 20px 40px)"></span>
+        <span class="room-label"><span>＋</span>Место для новой идеи</span>
+        <span class="room-cta">＋ Построить квантум</span>
+      </button>
+    </div>
+  </article>`;
+}
+
+function floorHTML(f, floorNumber) {
+  const l = lab(f.id);
+  const status = floorState(state, f);
+  const labels = {
+    teacher: "Нужен преподаватель",
+    waiting: "Набор группы",
+    learning: "Занятие идёт",
+    paused: "Пауза",
+    ready: "Проект готов",
+  };
+  const statusText =
+    status === "learning"
+      ? `⏱ <span data-lesson="${f.id}">${time(f.lesson)}</span>`
+      : `${f.projects} проектов`;
+  return `<article class="floor-row" data-floor-card="${f.id}">
+    <div class="floor-marker"><span>${floorNumber}</span></div>
+    <div class="floor-content">
+      <div class="floor-header">
+        <span style="font-size:14px">${l.icon}</span>
+        <b>${esc(l.name)}</b>
+        <span class="status ${status}">${labels[status]}</span>
+        <span class="floor-hint">ур. ${f.level} · ${statusText}</span>
+      </div>
+      <button class="room" data-action="lab" data-id="${f.id}" aria-label="Открыть ${esc(l.name)}">
+        ${roomArt(f.id)}
+        <span class="room-label"><span>${l.icon}</span>${esc(l.short.toUpperCase())}</span>
+        <span class="actors" aria-hidden="true">
+          ${activeTeachers(state, f)
+            .map(
+              (t, i) =>
+                `<span class="person teacher" style="--delay:-${i * 0.8}s">${sprite(i % 2, status === "learning")}</span>`,
+            )
+            .join("")}
+          ${Array.from(
+            { length: Math.min(f.students, 5) },
+            (_, i) =>
+              `<span class="person" style="--delay:-${i * 0.6}s">${sprite(2 + (i % 2), status === "learning")}</span>`,
+          ).join("")}
+        </span>
+        ${
+          status === "ready"
+            ? '<span class="room-cta">✦ Защитить проект</span>'
+            : status === "teacher"
+              ? '<span class="room-cta">＋ Назначить</span>'
+              : ""
+        }
+      </button>
+      ${
+        f.lesson > 0
+          ? `<div class="mini-progress"><i data-floor-progress="${f.id}" style="width:${(1 - f.lesson / f.lessonTotal) * 100}%"></i></div>`
+          : ""
+      }
+    </div>
+  </article>`;
+}
+
 function render() {
   document.body.classList.toggle("no-motion", !state.settings.motion);
   $("#coins").textContent = fmt(state.coins);
   $("#knowledge").textContent = fmt(state.knowledge);
   $("#trophies").textContent = fmt(state.trophies);
-  $("#floor-total").textContent =
-    `${state.floors.length + 2} этажа · ${state.floors.length} из 10 направлений`;
-  $("#chapter-label").textContent =
-    state.chapter >= 6
-      ? "Кампания завершена"
-      : `Глава ${state.chapter + 1} из 6`;
-  $("#roof-price").textContent =
-    state.floors.length === 10
-      ? "Все направления открыты"
-      : `Новое направление · ${fmt(floorCost(state))} монет`;
   $("#pause").textContent = state.settings.paused ? "▶" : "Ⅱ";
   $("#pause").setAttribute(
     "aria-label",
@@ -235,7 +327,7 @@ function render() {
       ? `<div class="save-error">${esc(saveError)} <button class="btn ghost" data-action="nav" data-view="settings">Настройки</button></div>`
       : "") +
     (state.settings.paused
-      ? '<div class="paused-banner">Игра на паузе. Нажмите ▶, когда будете готовы.</div>'
+      ? '<div class="paused-banner">Игра на паузе. Нажмите ▶, чтобы продолжить.</div>'
       : "");
   const signature =
     JSON.stringify(
@@ -249,55 +341,32 @@ function render() {
         floorState(state, f),
         f.projects,
       ]),
-    ) + state.newbies.length;
+    ) +
+    state.newbies.length +
+    state.floors.length;
   if (signature !== worldSignature) {
     const focus =
       document.activeElement?.closest("[data-floor-card]")?.dataset.floorCard;
     worldSignature = signature;
-    $("#tower").innerHTML =
-      [...state.floors]
-        .reverse()
-        .map((f) => floorHTML(f, state.floors.indexOf(f)))
-        .join("") +
-      `<article class="floor service"><div class="floor-top"><div class="floor-name"><span class="floor-number">2</span><b>Кабинет директора</b></div><span class="status">Центр управления</span></div><button class="room" data-action="nav" data-view="staff" aria-label="Преподаватели">${roomArt("director")}<span class="actors service-actors"><span class="person teacher">${sprite(1, true)}</span></span><span class="room-label">♧ Команда преподавателей</span><span class="room-cta">${teacherList(state).length ? teacherList(state).length + " в команде" : "Нанять первого"}</span></button></article><article class="floor service"><div class="floor-top"><div class="floor-name"><span class="floor-number">1</span><b>Ресепшн</b></div><span class="status">${state.newbies.length ? state.newbies.length + " ждут помощи" : "Добро пожаловать"}</span></div><button class="room" data-action="nav" data-view="reception" aria-label="Ресепшн и новые ученики">${roomArt("reception")}<span class="actors service-actors">${state.newbies.map((n, i) => `<span class="person">${sprite(2 + (i % 2), true)}</span>`).join("")}</span><span class="room-label">☀ Большие открытия начинаются здесь</span>${state.newbies.length ? '<span class="room-cta">? Помочь новенькому</span>' : ""}</button></article>`;
+    const ordered = [...state.floors].reverse();
+    const totalFloors = state.floors.length + 2;
+    let html = directorFloorHTML();
+    html += buildSlotHTML();
+    html += ordered
+      .map((f, i) => {
+        // Highest index at top, lowest index at bottom (floor 2)
+        const floorNumber = state.floors.length - i + 1;
+        return floorHTML(f, floorNumber);
+      })
+      .join("");
+    html += receptionFloorHTML();
+    $("#tower").innerHTML = html;
     if (focus && !$("#modal").open)
       $(`[data-floor-card="${focus}"] .room`)?.focus({ preventScroll: true });
   }
-  const railKey = JSON.stringify([
-    chapterProgress(state),
-    state.chapter,
-    state.log[0],
-    teacherList(state).length,
-    state.newbies.length,
-    totalProjects(state),
-    state.collection.length,
-  ]);
-  if (railKey !== railSignature) {
-    railSignature = railKey;
-    renderRail();
-  }
   updateClocks();
 }
-function renderRail() {
-  const c = CHAPTERS[state.chapter],
-    p = chapterProgress(state);
-  $("#rail").innerHTML =
-    `<section class="card chapter-card"><div class="chapter-top"><span class="chapter-number">${c ? `ГЛАВА ${String(state.chapter + 1).padStart(2, "0")} / 06` : "ВСЕ ШЕСТЬ ГЛАВ ПРОЙДЕНЫ"}</span><span class="chapter-icon">${c ? "⚑" : "✧"}</span></div><h2>${c ? c.title : "Кванториум будущего"}</h2><p>${c ? c.text : "Вы создали большой научный центр. Продолжайте проекты и соберите все открытия в коллекции."}</p>${c ? `<div class="goals">${p.items.map((i) => `<div class="goal"><span class="check ${i.value >= i.need ? "done" : ""}">${i.value >= i.need ? "✓" : ""}</span>${i.label}<span class="count">${Math.min(i.value, i.need)}/${i.need}</span></div>`).join("")}</div><div class="reward-row">Награда <b>● ${fmt(c.coins)}</b><b>✦ ${fmt(c.knowledge)}</b></div>${p.complete ? button("Завершить главу", "claimChapter", "", "primary full") : button(teacherList(state).length === 0 ? "Найти преподавателя" : "К целям главы", "guide", "", "secondary full")}` : button("Коллекция открытий", "nav", 'data-view="collection"', "secondary full")}</section><div class="quick-stat"><div><strong>${totalProjects(state)}</strong><small>ПРОЕКТОВ ВЫПОЛНЕНО</small></div><div><strong>${Math.round(incomeRate(state))}<span style="font-size:12px"> / мин</span></strong><small>ДОХОД ЦЕНТРА</small></div></div><section class="card activity-card"><h2>Жизнь кванториума</h2><div class="activity-list">${state.newbies.length ? `<div class="activity-item"><span class="activity-icon">?</span><div><b>${state.newbies.length} новеньких ждут помощи</b><button class="btn ghost" data-action="nav" data-view="reception">Заглянуть на ресепшн</button></div></div>` : ""}${(state
-      .log.length
-      ? state.log.slice(0, 3)
-      : [
-          { text: "IT-квантум готов к первому занятию", at: 0 },
-          { text: "Алина ждёт собеседования", at: 0 },
-        ]
-    )
-      .map(
-        (l, i) =>
-          `<div class="activity-item"><span class="activity-icon">${["✦", "♧", "◈"][i]}</span><div><b>${esc(l.text)}</b><small>${time(l.at)} · время в игре</small></div></div>`,
-      )
-      .join(
-        "",
-      )}</div><button class="btn ghost" style="margin-top:15px" data-action="nav" data-view="journal">Весь журнал</button></section><section class="card quote-card"><span class="quote-symbol">“</span><p>Самое интересное открытие — то, которое ты сделал сам.</p><b>Маленький шаг. Большая идея.</b></section>`;
-}
+
 function updateClocks() {
   document.querySelectorAll("[data-lesson]").forEach((e) => {
     let f = state.floors.find((f) => f.id === e.dataset.lesson);
@@ -327,9 +396,14 @@ function updateClocks() {
     .querySelectorAll("[data-joint]")
     .forEach((e) => (e.textContent = time(state.joint?.left || 0)));
 }
-function modal(title, body, eyebrow = "КВАНТОРИУМ") {
+
+function modal(title, body, eyebrow = "КВАНТОРИУМ", showHome = true) {
   const d = $("#modal");
-  d.innerHTML = `<header class="modal-head"><div><p class="eyebrow">${eyebrow}</p><h2 id="modal-title">${title}</h2></div><button class="icon-btn" data-action="close" aria-label="Закрыть окно">×</button></header><div class="modal-body">${body}</div>`;
+  const homeBtn =
+    showHome && modalView?.view !== "director"
+      ? '<button class="icon-btn" data-action="nav" data-view="director" aria-label="Кабинет директора">🏢</button>'
+      : "";
+  d.innerHTML = `<header class="modal-head"><div><p class="eyebrow">${eyebrow}</p><h2 id="modal-title">${title}</h2></div><div class="modal-actions">${homeBtn}<button class="icon-btn" data-action="close" aria-label="Закрыть окно">×</button></div></header><div class="modal-body">${body}</div>`;
   if (!d.open) d.showModal();
 }
 function closeModal() {
@@ -344,19 +418,71 @@ function show(view, param = null) {
   modalView = { view, param };
   drawModal();
 }
+
+function chapterCardHTML() {
+  const c = CHAPTERS[state.chapter],
+    p = chapterProgress(state);
+  if (!c) {
+    return `<section class="card chapter-card"><div class="chapter-top"><span class="chapter-number">ВСЕ ШЕСТЬ ГЛАВ ПРОЙДЕНЫ</span><span class="chapter-icon">✧</span></div><h2>Кванториум будущего</h2><p>Вы создали большой научный центр. Продолжайте проекты и собирайте открытия в коллекции.</p>${button("Коллекция открытий", "nav", 'data-view="collection"', "secondary full")}</section>`;
+  }
+  return `<section class="card chapter-card"><div class="chapter-top"><span class="chapter-number">ГЛАВА ${String(state.chapter + 1).padStart(2, "0")} / 06</span><span class="chapter-icon">⚑</span></div><h2>${c.title}</h2><p>${c.text}</p><div class="goals">${p.items
+    .map(
+      (i) =>
+        `<div class="goal"><span class="check ${i.value >= i.need ? "done" : ""}">${i.value >= i.need ? "✓" : ""}</span>${i.label}<span class="count">${Math.min(i.value, i.need)}/${i.need}</span></div>`,
+    )
+    .join("")}</div><div class="reward-row">Награда <b>● ${fmt(c.coins)}</b><b>✦ ${fmt(c.knowledge)}</b></div>${
+    p.complete
+      ? button("Завершить главу", "claimChapter", "", "primary full")
+      : button(
+          teacherList(state).length === 0
+            ? "Найти преподавателя"
+            : "К целям главы",
+          "guide",
+          "",
+          "secondary full",
+        )
+  }</section>`;
+}
+
 function drawModal() {
   if (!modalView) return;
   const { view, param } = modalView;
   const f = state.floors.find((f) => f.id === param);
   switch (view) {
+    case "director":
+      modal(
+        "Кабинет директора",
+        `<p class="modal-intro">Здесь решаются все важные вопросы кванториума. Выберите, чем заняться.</p><div class="director-tabs">
+          <button class="director-tab" data-action="nav" data-view="build"><span class="tab-icon">⊞</span><div>Строительство<small>Новые направления</small></div></button>
+          <button class="director-tab" data-action="nav" data-view="staff"><span class="tab-icon">♧</span><div>Преподаватели<small>Команда и найм</small></div></button>
+          <button class="director-tab" data-action="nav" data-view="projects"><span class="tab-icon">⚑</span><div>Проекты и выставки<small>Соревнования</small></div></button>
+          <button class="director-tab" data-action="nav" data-view="collection"><span class="tab-icon">✧</span><div>Коллекция открытий<small>${state.collection.length} / 30</small></div></button>
+          <button class="director-tab" data-action="nav" data-view="journal"><span class="tab-icon">✎</span><div>Журнал событий<small>Последние новости</small></div></button>
+          <button class="director-tab" data-action="nav" data-view="settings"><span class="tab-icon">⚙</span><div>Настройки<small>Сохранение и звук</small></div></button>
+          <button class="director-tab" data-action="nav" data-view="help"><span class="tab-icon">?</span><div>Как играть<small>Памятка директора</small></div></button>
+        </div>${chapterCardHTML()}<div class="quick-stat" style="margin-top:12px"><div><strong>${totalProjects(state)}</strong><small>ПРОЕКТОВ ВЫПОЛНЕНО</small></div><div><strong>${Math.round(incomeRate(state))}<span style="font-size:12px"> / мин</span></strong><small>ДОХОД ЦЕНТРА</small></div></div>`,
+        "УПРАВЛЕНИЕ",
+        false,
+      );
+      break;
     case "build":
       modal(
-        "Место для новой идеи",
+        "Строительство",
         `<p class="modal-intro">Каждое направление открывает свои проекты. Преподаватели появятся среди кандидатов после постройки.</p><div class="modal-grid">${LABS.map(
           (l) => {
             let built = state.floors.some((f) => f.id === l.id),
               locked = totalProjects(state) < l.unlock;
-            return `<article class="lab-option ${locked ? "locked" : ""}" style="--lab-color:${l.color}"><div class="lab-icon">${l.icon}</div><h3>${l.name}</h3><p>${l.short}</p>${button(built ? "✓ Уже построен" : locked ? `${l.unlock} проектов для открытия` : `Построить · ● ${fmt(floorCost(state))}`, "build", `data-id="${l.id}"`, built || locked ? "secondary" : "primary", built || locked)}</article>`;
+            return `<article class="lab-option ${locked ? "locked" : ""}" style="--lab-color:${l.color}"><div class="lab-icon">${l.icon}</div><h3>${l.name}</h3><p>${l.short}</p>${button(
+              built
+                ? "✓ Уже построен"
+                : locked
+                  ? `${l.unlock} проектов для открытия`
+                  : `Построить · ● ${fmt(floorCost(state))}`,
+              "build",
+              `data-id="${l.id}"`,
+              built || locked ? "secondary" : "primary",
+              built || locked,
+            )}</article>`;
           },
         ).join("")}</div>`,
         "СТРОИТЕЛЬСТВО",
@@ -378,7 +504,7 @@ function drawModal() {
           (l) =>
             ["Алгоритм", "Связи", "Маршрут"].map((v, i) => {
               const done = state.collection.includes(l.id + ":" + i);
-              return `<div class="collection-item ${done ? "" : "locked"}"><span>${done ? l.icon : "◇"}</span><b>${l.name}</b><span style="font-size:12px;margin-top:6px">${v} ${done ? "✓" : "· ещё впереди"}</span></div>`;
+              return `<div class="collection-item ${done ? "" : "locked"}"><span>${done ? l.icon : "◇"}</span><b>${l.name}</b><span style="font-size:12px;margin-top:6px;display:block">${v} ${done ? "✓" : "· ещё впереди"}</span></div>`;
             }),
         ).join("")}</div>`,
         "МУЗЕЙ ВАШИХ ИДЕЙ",
@@ -401,7 +527,16 @@ function drawModal() {
     case "reception":
       modal(
         "Поможем новеньким",
-        `<p class="modal-intro">Покажите ученику дорогу в нужный квантум. За помощь — 25 монет и 10 знаний. Если группа занята, можно вернуться позже.</p><div class="reception-list">${state.newbies.length ? state.newbies.map((n) => `<article class="staff-card"><div class="staff-card-top"><div class="avatar sprite-avatar">${sprite(2)}</div><div><h3>${esc(n.name)}</h3><p>Ищет ${lab(n.target).name}</p></div></div>${button("Проводить на занятие", "escort-start", `data-id="${esc(n.id)}"`, "primary")}</article>`).join("") : '<div class="empty"><span class="big-icon">☀</span>Все нашли свои лаборатории.<br>Новые ученики скоро придут.</div>'}</div>`,
+        `<p class="modal-intro">Покажите ученику дорогу в нужный квантум. За помощь — 25 монет и 10 знаний.</p><div class="reception-list">${
+          state.newbies.length
+            ? state.newbies
+                .map(
+                  (n) =>
+                    `<article class="staff-card"><div class="staff-card-top"><div class="avatar sprite-avatar">${sprite(2)}</div><div><h3>${esc(n.name)}</h3><p>Ищет ${lab(n.target).name}</p></div></div>${button("Проводить на занятие", "escort-start", `data-id="${esc(n.id)}"`, "primary")}</article>`,
+                )
+                .join("")
+            : '<div class="empty"><span class="big-icon">☀</span>Все нашли свои лаборатории.<br>Новые ученики скоро придут.</div>'
+        }</div>`,
         "РЕСЕПШН",
       );
       break;
@@ -415,7 +550,7 @@ function drawModal() {
           [
             "01",
             "Соберите команду",
-            "В разделе «Преподаватели» наймите специалиста. Его профильный навык определяет скорость занятий.",
+            "В кабинете директора откройте «Преподаватели» и наймите специалиста. Его профильный навык определяет скорость занятий.",
           ],
           [
             "02",
@@ -425,12 +560,12 @@ function drawModal() {
           [
             "03",
             "Защитите проект",
-            "Нажмите на готовую лабораторию и решите тематическое задание. Ошибки не штрафуются. Во время мини-игры время центра остановлено.",
+            "Нажмите на готовую лабораторию и решите тематическое задание. Ошибки не штрафуются.",
           ],
           [
             "04",
             "Развивайте центр",
-            "Монеты нужны для найма и строительства, знания — для улучшений и обучения. Цели главы дают дополнительные ресурсы.",
+            "Монеты нужны для найма и строительства, знания — для улучшений и обучения.",
           ],
           [
             "05",
@@ -444,19 +579,21 @@ function drawModal() {
           )
           .join(
             "",
-          )}<div class="info-box">Сохранение работает только в этом браузере. Экспортируйте копию в настройках. За время отсутствия учитывается до двух часов обычного игрового времени; проекты сами не завершаются.</div>`,
+          )}<div class="info-box">Сохранение работает только в этом браузере. Экспортируйте копию в настройках.</div>`,
         "ПАМЯТКА ДИРЕКТОРА",
       );
       break;
   }
 }
+
 function renderStaff() {
   modal(
-    "Люди, которые вдохновляют",
+    "Преподаватели",
     `<p class="modal-intro">До трёх преподавателей на квантум. Навык ускоряет занятия и приносит доход. Во время повышения квалификации преподаватель временно не работает.</p><h3 class="section-title">Ваша команда <span class="pill">${teacherList(state).length} преподавателей</span></h3>${
       teacherList(state)
         .map((t) => {
           let home = state.floors.find((f) => f.teachers.includes(t.id));
+          if (!home) return "";
           return `<article class="staff-card"><div class="staff-card-top"><div class="avatar sprite-avatar">${sprite(0)}</div><div><h3>${esc(t.name)}</h3><p>${lab(home.id).name} · ${t.training ? `Обучение: <b data-training="${t.id}">${time(t.training.left)}</b>` : "Работает"}</p></div></div><div class="skill-tags">${Object.entries(
             t.skills,
           )
@@ -466,7 +603,15 @@ function renderStaff() {
             )
             .join(
               "",
-            )}</div><div class="action-row">${button(t.skills[home.id] === 10 ? "Навык 10/10" : `Обучить · ✦ ${30 * t.skills[home.id]}`, "train", `data-id="${t.id}"`, "secondary small", !!t.training || t.skills[home.id] === 10)}${button("Перевести", "move-dialog", `data-id="${t.id}"`, "secondary small", !!t.training)}${button("Уволить", "fire-dialog", `data-id="${t.id}"`, "ghost small", !!t.training)}</div></article>`;
+            )}</div><div class="action-row">${button(
+            t.skills[home.id] === 10
+              ? "Навык 10/10"
+              : `Обучить · ✦ ${30 * t.skills[home.id]}`,
+            "train",
+            `data-id="${t.id}"`,
+            "secondary small",
+            !!t.training || t.skills[home.id] === 10,
+          )}${button("Перевести", "move-dialog", `data-id="${t.id}"`, "secondary small", !!t.training)}${button("Уволить", "fire-dialog", `data-id="${t.id}"`, "ghost small", !!t.training)}</div></article>`;
         })
         .join("") ||
       '<div class="empty">Первое занятие начинается с хорошего преподавателя.<br>Кандидат уже ждёт ниже.</div>'
@@ -505,14 +650,36 @@ function renderLab(f) {
     cost = upgradeCost(f);
   modal(
     l.name,
-    `<div class="lab-detail-art">${roomArt(f.id)}</div><div class="detail-stats"><div><b>${f.students}/${capacity(f)}</b><span>учеников</span></div><div><b>${f.teachers.length}/3</b><span>преподавателей</span></div><div><b>${f.projects}</b><span>проектов</span></div></div>${status === "ready" ? `<div class="info-box">Группа готова представить проект. Решите задание и получите монеты и знания.</div>${button("✦ Защитить проект", "game-start", `data-id="${f.id}"`, "primary full")}` : status === "teacher" ? `<div class="info-box">Для занятия нужен преподаватель с навыком этого направления.</div>${button("Найти преподавателя", "nav", 'data-view="staff"', "primary full")}` : status === "learning" || status === "paused" ? `<div class="info-box">${status === "paused" ? "Занятие ждёт возвращения преподавателя." : "Ученики работают над проектом."} Осталось <b data-lesson="${f.id}">${time(f.lesson)}</b>.</div>` : '<div class="info-box">Группа набирается автоматически. Когда все места заполнятся, начнётся занятие.</div>'}<h3 class="section-title">Развитие лаборатории <span class="pill">Уровень ${f.level}/3</span></h3><p class="modal-intro">Улучшение добавляет два места и увеличивает награду за каждый проект. Реконструкцию можно начать между занятиями.</p>${f.level < 3 ? button(`Улучшить · ● ${cost.coins} + ✦ ${cost.knowledge}`, "upgrade", `data-id="${f.id}"`, "secondary full", f.lesson > 0 || f.ready) : '<span class="pill">✓ Максимальный уровень</span>'}${f.level >= 2 ? `<h3 class="section-title">Специализация</h3>${f.branch ? `<div class="info-box">${f.branch === "speed" ? "Быстрый старт: занятия на 25% короче." : "Качество проектов: +45 монет за каждый проект."} Специализация выбрана для этой лаборатории.</div>` : `<p class="modal-intro">Выберите один постоянный бонус. Бесплатно.</p><div class="split">${button("Быстрый старт · −25% времени", "branch", `data-id="${f.id}" data-value="speed"`, "secondary")}${button("Качество · +45 монет", "branch", `data-id="${f.id}" data-value="quality"`, "secondary")}</div>`}` : ""}<h3 class="section-title">Команда учеников <span class="pill">${f.team}/5</span></h3><p class="modal-intro">Каждый третий завершённый проект открывает нового участника команды. Следующий — через ${3 - (f.projects % 3)} проектов.</p>${button("Выставки и совместные проекты", "nav", 'data-view="projects"', "secondary full")}`,
+    `<div class="lab-detail-art">${roomArt(f.id)}</div><div class="detail-stats"><div><b>${f.students}/${capacity(f)}</b><span>учеников</span></div><div><b>${f.teachers.length}/3</b><span>преподавателей</span></div><div><b>${f.projects}</b><span>проектов</span></div></div>${
+      status === "ready"
+        ? `<div class="info-box">Группа готова представить проект. Решите задание и получите монеты и знания.</div>${button("✦ Защитить проект", "game-start", `data-id="${f.id}"`, "primary full")}`
+        : status === "teacher"
+          ? `<div class="info-box">Для занятия нужен преподаватель с навыком этого направления.</div>${button("Найти преподавателя", "nav", 'data-view="staff"', "primary full")}`
+          : status === "learning" || status === "paused"
+            ? `<div class="info-box">${status === "paused" ? "Занятие ждёт возвращения преподавателя." : "Ученики работают над проектом."} Осталось <b data-lesson="${f.id}">${time(f.lesson)}</b>.</div>`
+            : '<div class="info-box">Группа набирается автоматически. Когда все места заполнятся, начнётся занятие.</div>'
+    }<h3 class="section-title">Развитие лаборатории <span class="pill">Уровень ${f.level}/3</span></h3><p class="modal-intro">Улучшение добавляет два места и увеличивает награду за каждый проект.</p>${
+      f.level < 3
+        ? button(
+            `Улучшить · ● ${cost.coins} + ✦ ${cost.knowledge}`,
+            "upgrade",
+            `data-id="${f.id}"`,
+            "secondary full",
+            f.lesson > 0 || f.ready,
+          )
+        : '<span class="pill">✓ Максимальный уровень</span>'
+    }${
+      f.level >= 2
+        ? `<h3 class="section-title">Специализация</h3>${f.branch ? `<div class="info-box">${f.branch === "speed" ? "Быстрый старт: занятия на 25% короче." : "Качество проектов: +45 монет за каждый проект."} Специализация выбрана.</div>` : `<p class="modal-intro">Выберите один постоянный бонус. Бесплатно.</p><div class="split">${button("Быстрый старт · −25% времени", "branch", `data-id="${f.id}" data-value="speed"`, "secondary")}${button("Качество · +45 монет", "branch", `data-id="${f.id}" data-value="quality"`, "secondary")}</div>`}`
+        : ""
+    }<h3 class="section-title">Команда учеников <span class="pill">${f.team}/5</span></h3><p class="modal-intro">Каждый третий завершённый проект открывает нового участника команды. Следующий — через ${3 - (f.projects % 3)} проектов.</p>${button("Выставки и совместные проекты", "nav", 'data-view="projects"', "secondary full")}`,
     l.short.toUpperCase(),
   );
 }
 function renderProjects() {
   modal(
-    "Большие идеи — вместе",
-    `<p class="modal-intro">Каждый третий проект добавляет участника в команду. Выставки дают награды без случайного проигрыша: нужная сила команды известна заранее.</p>${state.floors
+    "Проекты и выставки",
+    `<p class="modal-intro">Каждый третий проект добавляет участника в команду. Выставки дают награды без случайного проигрыша.</p>${state.floors
       .map((f) => {
         const l = lab(f.id),
           c = state.competitions.find((c) => c.floor === f.id),
@@ -541,14 +708,26 @@ function renderProjects() {
       })
       .join(
         "",
-      )}<h3 class="section-title">Межквантумный проект</h3><article class="staff-card"><div class="staff-card-top"><span class="chapter-icon">❋</span><div><h3>Умная теплица</h3><p>IT + Биоквантум + Хайтек</p></div></div><p class="modal-intro">Программа управляет датчиками, инженеры собирают устройство, а биологи создают условия для растений. Выполните хотя бы один обычный проект в каждом из трёх направлений.</p>${state.joint ? `<div class="info-box">Совместная работа идёт: <b data-joint>${time(state.joint.left)}</b></div>` : button("Начать · ✦ 180 знаний", "joint", "", "primary", !["it", "bio", "hi"].every((id) => state.floors.some((f) => f.id === id && f.projects > 0)))}<p class="subtle" style="margin-top:12px">3 минуты · награда: ● 600 · ✦ 150 · ♜ 2</p></article>`,
+      )}<h3 class="section-title">Межквантумный проект</h3><article class="staff-card"><div class="staff-card-top"><span class="chapter-icon">❋</span><div><h3>Умная теплица</h3><p>IT + Биоквантум + Хайтек</p></div></div><p class="modal-intro">Программа управляет датчиками, инженеры собирают устройство, а биологи создают условия для растений. Выполните хотя бы один обычный проект в каждом из трёх направлений.</p>${
+        state.joint
+          ? `<div class="info-box">Совместная работа идёт: <b data-joint>${time(state.joint.left)}</b></div>`
+          : button(
+              "Начать · ✦ 180 знаний",
+              "joint",
+              "",
+              "primary",
+              !["it", "bio", "hi"].every((id) =>
+                state.floors.some((f) => f.id === id && f.projects > 0),
+              ),
+            )
+      }<p class="subtle" style="margin-top:12px">3 минуты · награда: ● 600 · ✦ 150 · ♜ 2</p></article>`,
     "ПРОЕКТЫ И ВЫСТАВКИ",
   );
 }
 function renderSettings() {
   modal(
-    "В своём ритме",
-    `<div class="setting-row"><div><b>Звуки действий</b><small>Короткие звуки без фоновой музыки</small></div><button class="toggle ${state.settings.sound ? "on" : ""}" role="switch" aria-checked="${state.settings.sound}" aria-label="Звуки действий" data-action="setting" data-key="sound"></button></div><div class="setting-row"><div><b>Анимации</b><small>Движение персонажей и эффекты награды</small></div><button class="toggle ${state.settings.motion ? "on" : ""}" role="switch" aria-checked="${state.settings.motion}" aria-label="Анимации" data-action="setting" data-key="motion"></button></div><h3 class="section-title">Ваш прогресс</h3><p class="modal-intro">Сохраняется автоматически в этом браузере каждые 5 секунд и после действий. Копия позволит перенести игру на другое устройство.</p><div class="action-row">${button("Экспорт сохранения", "export", "", "primary")}${button("Импорт копии", "import", "", "secondary")}</div><input class="file-input" id="import-file" type="file" accept="application/json,.json"><div class="info-box">За время отсутствия учитываются доход и занятия за период до двух часов. Защита проектов остаётся за вами. Включённая пауза останавливает и офлайн-прогресс.</div><div class="action-row">${button("Как играть", "nav", 'data-view="help"', "secondary")}${button("Коллекция", "nav", 'data-view="collection"', "secondary")}${button("Журнал", "nav", 'data-view="journal"', "secondary")}</div><h3 class="section-title">Начать новую историю</h3><p class="modal-intro">Сброс удалит текущий прогресс в этом браузере. Сначала можно экспортировать копию.</p>${button("Начать заново", "reset-dialog", "", "danger")}<p class="subtle" style="margin-top:25px">Кванториум · версия 1.0<br>Одиночная игра. Без покупок, рекламы и обязательных ежедневных входов.</p>${window.QUANTORIUM_STANDALONE ? '<p class="subtle">Весь код и графика встроены в этот HTML-файл.</p>' : window.location.protocol === "file:" ? '<p class="subtle">Весь код — в файлах game.js, engine.js, app.js и tasks.js рядом с index.html.</p>' : '<a class="btn secondary full" href="source.zip" download>Скачать HTML, CSS и JS</a>'}`,
+    "Настройки",
+    `<div class="setting-row"><div><b>Звуки действий</b><small>Короткие звуки без фоновой музыки</small></div><button class="toggle ${state.settings.sound ? "on" : ""}" role="switch" aria-checked="${state.settings.sound}" aria-label="Звуки действий" data-action="setting" data-key="sound"></button></div><div class="setting-row"><div><b>Анимации</b><small>Движение персонажей и эффекты награды</small></div><button class="toggle ${state.settings.motion ? "on" : ""}" role="switch" aria-checked="${state.settings.motion}" aria-label="Анимации" data-action="setting" data-key="motion"></button></div><h3 class="section-title">Ваш прогресс</h3><p class="modal-intro">Сохраняется автоматически в этом браузере каждые 5 секунд и после действий. Копия позволит перенести игру на другое устройство.</p><div class="action-row">${button("Экспорт сохранения", "export", "", "primary")}${button("Импорт копии", "import", "", "secondary")}</div><input class="file-input" id="import-file" type="file" accept="application/json,.json"><div class="info-box">За время отсутствия учитываются доход и занятия за период до двух часов. Защита проектов остаётся за вами.</div><h3 class="section-title">Начать новую историю</h3><p class="modal-intro">Сброс удалит текущий прогресс в этом браузере. Сначала можно экспортировать копию.</p>${button("Начать заново", "reset-dialog", "", "danger")}<p class="subtle" style="margin-top:22px">Кванториум · версия 2.0<br>Одиночная игра. Без покупок, рекламы и обязательных ежедневных входов.</p>`,
     "НАСТРОЙКИ",
   );
 }
@@ -628,7 +807,12 @@ function drawGame() {
     l = lab(g.floor);
   if (g.done) {
     title = "Ещё одно открытие!";
-    body = `<div class="victory"><div class="medallion">${l.icon}</div><h3>Получилось!</h3><p>Вы помогли команде разобраться с задачей.<br>Проект готов к выставке.</p><div class="reward-big"><span>● ${110 + 30 * (state.floors.find((f) => f.id === g.floor).level - 1) + (state.floors.find((f) => f.id === g.floor).branch === "quality" ? 45 : 0)}</span><span>✦ ${35 + state.floors.find((f) => f.id === g.floor).level * 10}</span></div>${button("Завершить проект и забрать награду", "game-claim", "", "primary full")}<p class="subtle">Можно сделать перерыв. Прогресс сохранится.</p></div>`;
+    const flr = state.floors.find((f) => f.id === g.floor);
+    const rewardCoins =
+      110 +
+      30 * (flr.level - 1) +
+      (flr.branch === "quality" ? 45 : 0);
+    body = `<div class="victory"><div class="medallion">${l.icon}</div><h3>Получилось!</h3><p>Вы помогли команде разобраться с задачей.<br>Проект готов к выставке.</p><div class="reward-big"><span>● ${rewardCoins}</span><span>✦ ${35 + flr.level * 10}</span></div>${button("Завершить проект и забрать награду", "game-claim", "", "primary full")}<p class="subtle">Можно сделать перерыв. Прогресс сохранится.</p></div>`;
   } else if (g.kind === "sequence") {
     title = g.task.title;
     body = `<div class="game-instruction">${esc(g.task.hint)}<br><strong>Нажимайте шаги в правильном порядке.</strong></div>${progress(g.progress, 4)}<div class="game-status" role="status">${esc(g.status)} · ${g.progress}/4</div><div class="game-buttons">${g.order.map((i) => `<button class="game-card ${i < g.progress ? "correct" : ""}" data-action="sequence" data-index="${i}" ${i < g.progress ? "disabled" : ""}>${i < g.progress ? "✓ " : ""}${esc(g.task.steps[i])}</button>`).join("")}</div>`;
@@ -649,7 +833,7 @@ function drawGame() {
       design: "Путь пользователя",
     };
     title = titles[g.floor];
-    body = `<div class="game-instruction">Составьте программу движения от <strong>◉</strong> к <strong>★</strong>. Серые клетки — препятствия. Добавьте стрелки, затем нажмите «Запустить». Не больше 16 команд.</div><div class="grid-game" role="img" aria-label="Поле пять на пять. Робот: строка ${Math.floor(g.pos / 5) + 1}, столбец ${(g.pos % 5) + 1}. Цель: строка ${Math.floor(g.target / 5) + 1}, столбец ${(g.target % 5) + 1}. Препятствия: ${g.walls.map((n) => `${Math.floor(n / 5) + 1},${(n % 5) + 1}`).join("; ")}">${Array.from({ length: 25 }, (_, i) => `<div class="grid-cell ${g.walls.includes(i) ? "wall" : i === g.pos ? "bot" : i === g.target ? "target" : ""}">${i === g.pos ? "◉" : i === g.target ? "★" : g.walls.includes(i) ? "▧" : ""}</div>`).join("")}</div><div class="program" aria-label="Программа движения">${g.program.length ? g.program.map((d) => ({ up: "↑", down: "↓", left: "←", right: "→" })[d]).join(" ") : "<small>Здесь появится ваша программа</small>"}</div><div class="arrow-controls">${[
+    body = `<div class="game-instruction">Составьте программу движения от <strong>◉</strong> к <strong>★</strong>. Серые клетки — препятствия. Не больше 16 команд.</div><div class="grid-game" role="img" aria-label="Поле пять на пять. Робот: строка ${Math.floor(g.pos / 5) + 1}, столбец ${(g.pos % 5) + 1}. Цель: строка ${Math.floor(g.target / 5) + 1}, столбец ${(g.target % 5) + 1}.">${Array.from({ length: 25 }, (_, i) => `<div class="grid-cell ${g.walls.includes(i) ? "wall" : i === g.pos ? "bot" : i === g.target ? "target" : ""}">${i === g.pos ? "◉" : i === g.target ? "★" : g.walls.includes(i) ? "▧" : ""}</div>`).join("")}</div><div class="program" aria-label="Программа движения">${g.program.length ? g.program.map((d) => ({ up: "↑", down: "↓", left: "←", right: "→" })[d]).join(" ") : "<small>Здесь появится ваша программа</small>"}</div><div class="arrow-controls">${[
       ["left", "←"],
       ["up", "↑"],
       ["down", "↓"],
@@ -672,7 +856,7 @@ function drawGame() {
     title,
     body +
       (!g.done
-        ? `<div style="margin-top:24px">${button("Вернуться позже", "close", "", "ghost")}</div>`
+        ? `<div style="margin-top:22px">${button("Вернуться позже", "close", "", "ghost")}</div>`
         : ""),
     `${l.name.toUpperCase()} · ${["sequence", "pairs", "route"].indexOf(g.kind) + 1}/3`,
   );
@@ -832,10 +1016,6 @@ function handleAction(e) {
     case "nav":
       if (d.view === "tower") {
         closeModal();
-        window.scrollTo({
-          top: 0,
-          behavior: state.settings.motion ? "smooth" : "instant",
-        });
       } else show(d.view);
       break;
     case "close":
@@ -921,7 +1101,7 @@ function handleAction(e) {
       modalView = null;
       modal(
         "Завершить сотрудничество?",
-        `<p class="modal-intro">${esc(state.teachers[id]?.name || "Преподаватель")} покинет центр. Плата за найм не возвращается. Занятие без профильного преподавателя приостановится.</p><div class="action-row">${button("Уволить", "fire", `data-id="${id}"`, "danger")}${button("Оставить в команде", "nav", 'data-view="staff"', "secondary")}</div>`,
+        `<p class="modal-intro">${esc(state.teachers[id]?.name || "Преподаватель")} покинет центр. Плата за найм не возвращается.</p><div class="action-row">${button("Уволить", "fire", `data-id="${id}"`, "danger")}${button("Оставить", "nav", 'data-view="staff"', "secondary")}</div>`,
       );
       break;
     case "fire":
@@ -937,7 +1117,7 @@ function handleAction(e) {
       modalView = null;
       modal(
         "Выбрать специализацию?",
-        `<p class="modal-intro">${d.value === "speed" ? "Занятия станут на 25% короче." : "Каждый проект будет приносить на 45 монет больше."} Бонус постоянный: после выбора поменять его нельзя.</p><div class="action-row">${button("Выбрать", "branch-confirm", `data-id="${id}" data-value="${d.value}"`)}${button("Назад", "lab", `data-id="${id}"`, "secondary")}</div>`,
+        `<p class="modal-intro">${d.value === "speed" ? "Занятия станут на 25% короче." : "Каждый проект будет приносить на 45 монет больше."} Бонус постоянный.</p><div class="action-row">${button("Выбрать", "branch-confirm", `data-id="${id}" data-value="${d.value}"`)}${button("Назад", "lab", `data-id="${id}"`, "secondary")}</div>`,
       );
       break;
     case "branch-confirm":
@@ -1092,7 +1272,7 @@ function handleAction(e) {
       modalView = null;
       modal(
         "Начать с чистого листа?",
-        `<p class="modal-intro">Все этажи, преподаватели, проекты и ресурсы этой игры будут удалены. Экспортированная копия останется у вас.</p><div class="action-row">${button("Да, новая игра", "reset-confirm", "", "danger")}${button("Нет, продолжить", "nav", 'data-view="settings"', "secondary")}</div>`,
+        `<p class="modal-intro">Все этажи, преподаватели, проекты и ресурсы будут удалены. Экспортированная копия останется у вас.</p><div class="action-row">${button("Да, новая игра", "reset-confirm", "", "danger")}${button("Нет, продолжить", "nav", 'data-view="settings"', "secondary")}</div>`,
       );
       break;
     case "reset-confirm":
@@ -1172,13 +1352,12 @@ window.addEventListener("pagehide", save);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) save();
 });
-// Another tab owns the newer save. Stop this tab instead of silently overwriting it.
 window.addEventListener("storage", (e) => {
   if (e.key !== KEY || !e.newValue) return;
   saveBlocked = true;
   state.settings.paused = true;
   saveError =
-    "Игра изменена в другой вкладке. Закройте эту вкладку или обновите страницу, чтобы загрузить актуальный прогресс.";
+    "Игра изменена в другой вкладке. Закройте эту вкладку или обновите страницу.";
   render();
 });
 shell();
@@ -1200,7 +1379,7 @@ setInterval(() => {
   ]);
   if (transitions !== lastTransitions) {
     lastTransitions = transitions;
-    if (modalView && ["lab", "staff", "projects"].includes(modalView.view)) {
+    if (modalView && ["lab", "staff", "projects", "director"].includes(modalView.view)) {
       const active = document.activeElement;
       const focusKey = active?.dataset.action,
         focusID = active?.dataset.id;
@@ -1223,11 +1402,11 @@ if (offline)
   setTimeout(
     () =>
       toast(
-        `С возвращением! За ваше отсутствие: +${fmt(offline.coins)} монет. Занятия и обучение тоже продолжились.`,
+        `С возвращением! За ваше отсутствие: +${fmt(offline.coins)} монет. Занятия и обучение продолжились.`,
       ),
     500,
   );
-// Optional agent interface: read state or open the same panel used by the player.
+
 if (document.modelContext?.registerTool) {
   const lifecycle = new AbortController();
   const tools = [
@@ -1260,14 +1439,14 @@ if (document.modelContext?.registerTool) {
     {
       name: "open_quantorium_panel",
       title: "Открыть раздел игры",
-      description:
-        "Open a game panel without buying, hiring or awarding anything.",
+      description: "Open a game panel without buying, hiring or awarding anything.",
       inputSchema: {
         type: "object",
         properties: {
           panel: {
             type: "string",
             enum: [
+              "director",
               "build",
               "staff",
               "projects",
@@ -1283,6 +1462,7 @@ if (document.modelContext?.registerTool) {
       execute: ({ panel }) => {
         if (
           ![
+            "director",
             "build",
             "staff",
             "projects",
@@ -1308,7 +1488,6 @@ if (document.modelContext?.registerTool) {
   window.addEventListener("pagehide", () => lifecycle.abort(), { once: true });
 }
 
-// Pointer capture prevents a stuck movement button when a finger leaves the D-pad.
 document.addEventListener("pointerdown", (e) => {
   const b = e.target.closest('[data-action="escort-control"]');
   if (b && game?.kind === "escort") {
